@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLASH Launcher HTML</title>
+    <style>
+        /* --- ESTILOS GERAIS --- */
+        :root {
+            --steam-dark: #171a21;
+            --steam-bg: #1b2838;
+            --steam-light: #2a475e;
+            --steam-accent: #66c0f4;
+            --steam-text: #c6d4df;
+            --steam-green: #5c7e10;
+            --steam-red: #d94126; /* Cor para Alpha */
+            --steam-gold: #ffc83d; /* Cor para Beta */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Motiva Sans", Sans-serif, Arial, sans-serif; }
+
+        body {
+            background-color: var(--steam-bg);
+            color: var(--steam-text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 250px;
+            background-color: var(--steam-dark);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #000;
+            flex-shrink: 0;
+        }
+
+        .logo { font-size: 24px; font-weight: bold; color: var(--steam-text); margin-bottom: 30px; letter-spacing: 2px; text-transform: uppercase; }
+        .logo span { color: var(--steam-accent); }
+
+        .menu-item {
+            padding: 10px;
+            cursor: pointer;
+            color: var(--steam-text);
+            transition: 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-radius: 3px;
+        }
+        .menu-item:hover { background-color: var(--steam-light); color: #fff; }
+        .menu-item.active { background-color: var(--steam-light); color: #fff; font-weight: bold; }
+
+        /* --- CONTEÚDO --- */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            background: linear-gradient(to bottom, #1b2838 0%, #1b2838 100%);
+            position: relative;
+        }
+
+        .header-title { font-size: 28px; color: #fff; margin-bottom: 20px; border-bottom: 1px solid var(--steam-light); padding-bottom: 10px; }
+
+        /* --- NOTIFICAÇÃO --- */
+        #notification-area {
+            position: fixed; top: 20px; right: 20px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            background: var(--steam-light); border-left: 4px solid var(--steam-green);
+            color: white; padding: 15px 20px; width: 300px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            animation: slideIn 0.5s ease-out;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .toast button { background: none; border: none; color: #fff; cursor: pointer; font-size: 16px; margin-left: 10px;}
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* --- GRID DE JOGOS --- */
+        .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 25px; }
+
+        .game-card {
+            background-color: rgba(0, 0, 0, 0.2);
+            aspect-ratio: 2 / 3;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            overflow: hidden;
+            border: 1px solid transparent;
+        }
+
+        .game-card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 5px 15px rgba(102, 192, 244, 0.4); border-color: var(--steam-accent); }
+
+        .card-image-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .game-thumb-placeholder { width: 100%; height: 100%; background: linear-gradient(45deg, #2a475e, #1b2838); display: flex; align-items: center; justify-content: center; font-size: 60px; color: rgba(255,255,255,0.1); position: absolute; z-index: 0; }
+        .game-cover-img { width: 100%; height: 100%; object-fit: cover; position: absolute; z-index: 1; transition: opacity 0.3s; }
+        .cover-failed { opacity: 0 !important; }
+
+        /* --- STATUS TAGS --- */
+        .status-badge {
+            position: absolute; top: 10px; right: 10px; z-index: 10;
+            padding: 4px 8px; font-size: 10px; font-weight: bold; border-radius: 2px;
+            color: #000; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .status-alpha { background-color: var(--steam-red); color: white; }
+        .status-beta { background-color: var(--steam-gold); color: black; }
+        .status-complete { display: none; } /* Não mostra nada se for completo */
+
+        .game-info {
+            z-index: 2;
+            background: linear-gradient(to top, rgba(23, 26, 33, 1) 0%, rgba(23, 26, 33, 0.6) 100%);
+            padding: 15px;
+            backdrop-filter: blur(2px);
+            transform: translateY(60%);
+            transition: transform 0.3s ease;
+        }
+        .game-card:hover .game-info { transform: translateY(0); }
+
+        .game-title { color: #fff; font-size: 15px; font-weight: bold; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* --- BOTÕES --- */
+        .play-btn {
+            background-color: var(--steam-green); color: #cfff04; border: none;
+            padding: 8px 12px; width: 100%; cursor: pointer;
+            font-weight: bold; text-transform: uppercase; font-size: 12px;
+            letter-spacing: 1px; transition: 0.2s;
+        }
+        .play-btn:hover { background-color: #76a116; color: #fff; }
+
+        .waitlist-btn {
+            background-color: var(--steam-light); color: var(--steam-text);
+            border: 1px solid var(--steam-accent);
+        }
+        .waitlist-btn:hover { background-color: var(--steam-accent); color: #1b2838; }
+
+        #loading { color: var(--steam-accent); font-size: 18px; }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #1b2838; width: 500px; border: 1px solid var(--steam-accent); box-shadow: 0 0 20px rgba(102, 192, 244, 0.2); padding: 30px; position: relative; color: #c6d4df; text-align: center; }
+        .modal-close { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #fff; }
+        .modal-btn { background: var(--steam-accent); color: #1b2838; padding: 15px 30px; text-decoration: none; display: inline-block; margin-top: 20px; border-radius: 4px; font-size: 16px; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
+        .modal-btn:hover { background: #fff; }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">Flash <span>Launcher</span></div>
+        <div class="menu-item active" onclick="closeModal()">Biblioteca</div>
+        <div class="menu-item" onclick="alert('Loja em desenvolvimento!')">Loja (Offline)</div>
+        <div class="menu-item" onclick="openModal()">Comunidade & Upload</div>
+        <div class="menu-item">Configurações</div>
+    </div>
+
+    <div class="main-content">
+        <h1 class="header-title">Sua Biblioteca</h1>
+        <div id="loading">Conectando ao repositório...</div>
+        <div class="games-grid" id="gamesContainer"></div>
+    </div>
+
+    <div id="notification-area"></div>
+
+    <div class="modal-overlay" id="uploadModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2 style="color:white; margin-bottom: 15px;">Envie seu Jogo</h2>
+            <div class="submit-option">
+                <p>Para desenvolvedores: Para marcar seu jogo como Beta ou Alpha, adicione <b>-BETA</b> ou <b>-ALPHA</b> no nome da pasta.</p>
+                <br>
+                <a href="COLE_O_LINK_DO_SEU_FORMS_AQUI" target="_blank" class="modal-btn">Preencher Formulário</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÕES ---
+        const repoOwner = 'gustavotedeski2-create';
+        const repoName = 'Flash-HTML';
+        const path = 'Games';
+        const mainBranch = 'main'; 
+
+        const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`;
+        const playBaseUrl = `https://${repoOwner}.github.io/${repoName}/${path}/`;
+        const rawBaseUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${mainBranch}/${path}/`;
+        // ---------------------
+
+        const container = document.getElementById('gamesContainer');
+        const loading = document.getElementById('loading');
+        const modal = document.getElementById('uploadModal');
+        const notificationArea = document.getElementById('notification-area');
+
+        // Modal
+        function openModal() { modal.style.display = 'flex'; }
+        function closeModal() { modal.style.display = 'none'; }
+        window.onclick = function(event) { if (event.target == modal) closeModal(); }
+
+        // Sistema de Notificações
+        function showNotification(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<span>${message}</span> <button onclick="this.parentElement.remove()">×</button>`;
+            notificationArea.appendChild(toast);
+            setTimeout(() => toast.remove(), 6000); // Some após 6 segundos
+        }
+
+        // Recupera Lista de Espera (Wishlist) do LocalStorage
+        function getWishlist() {
+            return JSON.parse(localStorage.getItem('flashLauncherWishlist')) || [];
+        }
+
+        function addToWishlist(gameName) {
+            let wishlist = getWishlist();
+            if (!wishlist.includes(gameName)) {
+                wishlist.push(gameName);
+                localStorage.setItem('flashLauncherWishlist', JSON.stringify(wishlist));
+                showNotification(`<b>${gameName}</b> adicionado à lista de espera!`);
+            } else {
+                showNotification(`Você já está esperando por ${gameName}.`);
+            }
+        }
+
+        // Função Principal de Carregamento
+        async function fetchGames() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`Erro API: ${response.status}`);
+                
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                const games = data.filter(item => item.type === 'dir');
+
+                if (games.length === 0) {
+                    container.innerHTML = '<p>Nenhum jogo encontrado.</p>';
+                    return;
+                }
+
+                checkGameReleases(games); // Checa se algum jogo da wishlist lançou
+                games.forEach(game => createGameCard(game));
+
+            } catch (error) {
+                loading.innerHTML = `<span style="color:red">Erro: ${error.message}</span>`;
+            }
+        }
+
+        // Verifica se jogos da lista de espera foram lançados
+        function checkGameReleases(currentGames) {
+            let wishlist = getWishlist();
+            let newWishlist = [];
+
+            wishlist.forEach(wishedGameName => {
+                // Procura se existe uma pasta com ESSE nome exato (sem sufixo Alpha)
+                // Ou seja, se antes era "Jogo-ALPHA" e agora existe "Jogo", ele lançou.
+                const gameReleased = currentGames.some(g => g.name === wishedGameName);
+                
+                // Se achou o nome limpo na lista atual, manda notificação
+                if (gameReleased) {
+                    showNotification(`🚀 <b>${wishedGameName}</b> foi lançado! Jogue agora.`);
+                    // Não adiciona na nova wishlist (remove da espera)
+                } else {
+                    // Mantém na lista se ainda não existe a versão final
+                    newWishlist.push(wishedGameName);
+                }
+            });
+
+            localStorage.setItem('flashLauncherWishlist', JSON.stringify(newWishlist));
+        }
+
+        function createGameCard(game) {
+            const folderName = game.name;
+            let displayName = folderName;
+            let status = 'COMPLETE'; // Alpha, Beta, Complete
+
+            // DETECTAR ESTADO PELO NOME DA PASTA
+            if (folderName.toUpperCase().endsWith('-ALPHA')) {
+                status = 'ALPHA';
+                displayName = folderName.slice(0, -6); // Remove "-ALPHA" do nome visual
+            } else if (folderName.toUpperCase().endsWith('-BETA')) {
+                status = 'BETA';
+                displayName = folderName.slice(0, -5); // Remove "-BETA" do nome visual
+            }
+
+            const cleanName = displayName.replace(/-/g, ' ').toUpperCase();
+            const hue = Math.floor(Math.random() * 360);
+            const probableCoverUrl = `${rawBaseUrl}${folderName}/cover.jpg`;
+
+            const card = document.createElement('div');
+            card.className = 'game-card';
+
+            // Define o botão baseado no status
+            let buttonHtml = '';
+            if (status === 'ALPHA') {
+                buttonHtml = `<button class="play-btn waitlist-btn" onclick="addToWishlist('${displayName}')">Adicionar à Lista</button>`;
+            } else {
+                // Beta e Complete são jogáveis
+                buttonHtml = `<button class="play-btn" onclick="playGame('${folderName}')">Jogar</button>`;
+            }
+
+            // Badge visual
+            let badgeHtml = '';
+            if (status !== 'COMPLETE') {
+                badgeHtml = `<div class="status-badge status-${status.toLowerCase()}">${status}</div>`;
+            }
+
+            card.innerHTML = `
+                ${badgeHtml}
+                <div class="card-image-container">
+                    <div class="game-thumb-placeholder" style="filter: hue-rotate(${hue}deg)">⚡</div>
+                    <img src="${probableCoverUrl}" 
+                         alt="${cleanName} Cover" 
+                         class="game-cover-img" 
+                         onerror="this.classList.add('cover-failed')">
+                </div>
+                <div class="game-info">
+                    <div class="game-title" title="${cleanName}">${cleanName}</div>
+                    ${buttonHtml}
+                </div>
+            `;
+            container.appendChild(card);
+        }
+
+        function playGame(folderName) {
+            const gameUrl = `${playBaseUrl}${folderName}/`;
+            window.open(gameUrl, '_blank');
+        }
+
+        fetchGames();
+    </script>
+</body>
+</html>
